@@ -59,11 +59,21 @@ class _MyHomePageState extends State<MyHomePage> {
       heading: 0.0,
       speed: 0.0,
       speedAccuracy: 0.0);
+  List<Marker> testingMarker = [];
+  Marker testMarker = Marker(markerId: MarkerId('test'), position: LatLng(0, 0));
   List<Marker> myPois = [];
+  // List<String> suggestions = ['-'];
+  // final TextEditingController text = TextEditingController();
+  // String searchValue = "";
   double myRating = 3.5;
   bool selected1 = false;
   bool selected2 = false;
   bool selected3 = false;
+  List<bool> openOrAll = <bool>[false, true];
+  final List<Widget> options = <Widget>[
+    const Text('Open'),
+    const Text('All'),
+  ];
   double radius = 0.5;
   dynamic openNow;
   List<String> categories = [];
@@ -120,6 +130,38 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  // void getSuggestion(String data) async {
+  //   const url = 'http://localhost:8000/pois/get-pois-by-name';
+  //   if (suggestions.isNotEmpty) {
+  //     setState(() {
+  //       suggestions.clear();
+  //     });
+  //   }
+  //
+  //   try {
+  //     final response = await http.post(Uri.parse(url),
+  //         headers: <String, String>{'Content-Type': 'application/json'}, body: jsonEncode({"poi_name": data}));
+  //     final json = jsonDecode(response.body) as List<dynamic>;
+  //     if (kDebugMode) {
+  //       print('getSuggestions() is called');
+  //       print(json);
+  //       print("\n\n\n");
+  //     }
+  //     for (int i = 0; i <= 3; i++) {
+  //       setState(() {
+  //         suggestions.add(json[i]['name'].toString());
+  //       });
+  //     }
+  //     if (kDebugMode) {
+  //       print(suggestions);
+  //     }
+  //   } catch (err) {
+  //     if (kDebugMode) {
+  //       print(err);
+  //     }
+  //   }
+  // }
+
   void getPois(double lat, double long, double radius, dynamic open, List categories, double rating) async {
     const url = 'http://localhost:8000/pois/get-pois';
 
@@ -152,7 +194,7 @@ class _MyHomePageState extends State<MyHomePage> {
       for (int i = 0; i < pois2.length; i++) {
         if (pois2[i]['category'].toString() == 'Aeroport') {
           markerbitmap = await BitmapDescriptor.fromAssetImage(
-            const ImageConfiguration(),
+            const ImageConfiguration(size: Size(70, 70)),
             "assets/airport.jpeg",
           );
           setState(() {});
@@ -448,7 +490,7 @@ class _MyHomePageState extends State<MyHomePage> {
       if (kDebugMode) {
         print("${currentPosition.longitude} ${currentPosition.latitude}");
       }
-      getPois(currentPosition.latitude, currentPosition.longitude, 0.5, null, [], myRating);
+      getPois(currentPosition.latitude, currentPosition.longitude, radius, null, [], myRating);
       getCategories();
     });
   }
@@ -468,6 +510,13 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: const Text('POI app'),
         backgroundColor: Colors.black,
+        actions: <Widget>[
+          IconButton(
+              onPressed: () async {
+                await openDialog(setState);
+              },
+              icon: const Icon(Icons.search)),
+        ],
       ),
       drawer: Drawer(
         child: SingleChildScrollView(
@@ -597,58 +646,36 @@ class _MyHomePageState extends State<MyHomePage> {
               const SizedBox(
                 height: 15,
               ),
-              ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: 145,
-                  maxHeight: 65,
-                ),
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      selected1 = !selected1;
-                    });
-                  },
-                  style: ButtonStyle(
-                    elevation: MaterialStateProperty.all(2),
-                    padding: MaterialStateProperty.all(const EdgeInsets.all(10)),
-                    backgroundColor: selected1
-                        ? MaterialStateProperty.all(Colors.cyanAccent)
-                        : MaterialStateProperty.all(Colors.grey),
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: 180,
+                    maxHeight: 80,
                   ),
-                  child: const Text(
-                    'Open',
-                    style: TextStyle(color: Colors.black),
+                  child: ToggleButtons(
+                    direction: Axis.horizontal,
+                    onPressed: (int index) {
+                      setState(() {
+                        // The button that is tapped is set to true, and the others to false.
+                        for (int i = 0; i < openOrAll.length; i++) {
+                          openOrAll[i] = i == index;
+                        }
+                      });
+                    },
+                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                    selectedBorderColor: Colors.blue[700],
+                    selectedColor: Colors.white,
+                    fillColor: Colors.blue[200],
+                    color: Colors.blue[400],
+                    constraints: const BoxConstraints(
+                      minHeight: 40.0,
+                      minWidth: 70.0,
+                    ),
+                    isSelected: openOrAll,
+                    children: options,
                   ),
                 ),
               ),
-              /*
-              TODO initializeaza vertical si fa o lista cu optiunile
-              final List<bool> _selectedFruits = <bool>[true, false, false];
-              ToggleButtons(
-                direction: vertical ? Axis.vertical : Axis.horizontal,
-                onPressed: (int index) {
-                  setState(() {
-                    // The button that is tapped is set to true, and the others to false.
-                    for (int i = 0; i < _selectedFruits.length; i++) {
-                      _selectedFruits[i] = i == index;
-                    }
-                  });
-                },
-                borderRadius: const BorderRadius.all(Radius.circular(8)),
-                selectedBorderColor: Colors.red[700],
-                selectedColor: Colors.white,
-                fillColor: Colors.red[200],
-                color: Colors.red[400],
-                constraints: const BoxConstraints(
-                  minHeight: 40.0,
-                  minWidth: 80.0,
-                ),
-                isSelected: _selectedFruits,
-                children: fruits,
-              ),
-
-              **/
-
               const SizedBox(
                 height: 25,
               ),
@@ -659,11 +686,11 @@ class _MyHomePageState extends State<MyHomePage> {
               const SizedBox(
                 height: 20,
               ),
-              const Center(
+              Center(
                 child: Text(
-                  'Show only POIs that are around me',
+                  'Show only POIs that are ${radius.toString()}km around me',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -672,45 +699,25 @@ class _MyHomePageState extends State<MyHomePage> {
               const SizedBox(
                 height: 15,
               ),
-              ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: 145,
-                  maxHeight: 65,
-                ),
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      selected2 = !selected2;
-                    });
-                  },
-                  style: ButtonStyle(
-                    elevation: MaterialStateProperty.all(2),
-                    padding: MaterialStateProperty.all(const EdgeInsets.all(10)),
-                    backgroundColor: selected2
-                        ? MaterialStateProperty.all(Colors.cyanAccent)
-                        : MaterialStateProperty.all(Colors.grey),
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: 355,
+                    maxHeight: 65,
                   ),
-                  child: const Text(
-                    'Close by(0.2km)',
-                    style: TextStyle(color: Colors.black),
+                  child: Slider(
+                    value: radius,
+                    max: 2,
+                    divisions: 20,
+                    label: radius.round().toString(),
+                    onChanged: (double value) {
+                      setState(() {
+                        radius = value;
+                      });
+                    },
                   ),
                 ),
               ),
-              /*
-              Todo set curent value pe 0
-              Slider(
-        value: _currentSliderValue,
-        max: 2,
-        divisions: 20,
-        label: _currentSliderValue.round().toString(),
-        onChanged: (double value) {
-          setState(() {
-            _currentSliderValue = value;
-          });
-        },
-      ),
-
-              */
               const SizedBox(
                 height: 25,
               ),
@@ -740,54 +747,31 @@ class _MyHomePageState extends State<MyHomePage> {
                   maxHeight: 65,
                 ),
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     setState(() {
-                      selected3 = !selected3;
-                      selected2 = false;
-                      selected1 = false;
+                      // selected3 = !selected3;
+                      // selected2 = false;
+                      // selected1 = false;
+                      openOrAll = [false, true];
+                      radius = 0.5;
                       myRating = 2.5;
                       selectedCategory = "";
                     });
-                  },
-                  style: ButtonStyle(
-                    elevation: MaterialStateProperty.all(2),
-                    padding: MaterialStateProperty.all(const EdgeInsets.all(10)),
-                    backgroundColor: selected3
-                        ? MaterialStateProperty.all(Colors.cyanAccent)
-                        : MaterialStateProperty.all(Colors.grey),
-                  ),
-                  child: const Text(
-                    'Revert to default',
-                    style: TextStyle(color: Colors.black),
-                  ),
-                ),
-              ),
-              const SizedBox(
-                height: 25,
-              ),
-              ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxHeight: 55,
-                  maxWidth: 125,
-                ),
-                child: ElevatedButton(
-                  onPressed: () async {
                     const url = 'http://localhost:8000/pois/get-pois';
                     if (myPois.isNotEmpty) {
                       setState(() {
                         myPois.clear();
                       });
                     }
-                    List<String> usedCategory = [selectedCategory];
                     try {
                       final response = await http.post(Uri.parse(url),
                           headers: <String, String>{'Content-Type': 'application/json'},
                           body: jsonEncode({
                             "latitude": currentPosition.latitude,
                             "longitude": currentPosition.longitude,
-                            "radius": selected2 ? 0.2 : 0.5,
-                            "open_now": selected1 ? true : null,
-                            "categories": (selectedCategory != "") ? usedCategory : [],
+                            "radius": radius,
+                            "open_now": null,
+                            "categories": [],
                             "rating": myRating
                           }));
 
@@ -1071,10 +1055,10 @@ class _MyHomePageState extends State<MyHomePage> {
                   style: ButtonStyle(
                     elevation: MaterialStateProperty.all(2),
                     padding: MaterialStateProperty.all(const EdgeInsets.all(10)),
-                    backgroundColor: MaterialStateProperty.all(Colors.blueAccent),
+                    backgroundColor: MaterialStateProperty.all(Colors.cyanAccent),
                   ),
                   child: const Text(
-                    'Apply',
+                    'Revert to default',
                     style: TextStyle(color: Colors.black),
                   ),
                 ),
@@ -1086,332 +1070,393 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ),
       ),
-      body: Column(
+      onDrawerChanged: (open) {
+        //Todo: call getPois()
+        if (!open) {
+          if (kDebugMode) {
+            print(scaffoldKey.currentState?.isDrawerOpen.toString());
+          }
+          List<String> usedCategory = [];
+          dynamic theFinalOpen;
+          if (openOrAll[1] == true) {
+            theFinalOpen = true;
+          } else {
+            theFinalOpen = null;
+          }
+          if (selectedCategory != "") {
+            usedCategory = [selectedCategory];
+          }
+          getPois(currentPosition.latitude, currentPosition.longitude, radius, theFinalOpen, usedCategory, myRating);
+        }
+      },
+      body: Stack(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(),
-              ),
-              IconButton(onPressed: () {}, icon: const Icon(Icons.search))
-            ],
-          ),
-          Expanded(
-            child: GoogleMap(
-              mapType: MapType.normal,
-              onMapCreated: (GoogleMapController controller) async {
-                controller1.complete(controller);
-                controller.setMapStyle(json);
-                getPois(currentPosition.latitude, currentPosition.longitude, 0.5, null, [], myRating);
-              },
-              initialCameraPosition: CameraPosition(target: demosPosition, zoom: 15),
-              markers: myPois.toSet(),
-              myLocationButtonEnabled: false,
-              buildingsEnabled: false,
-              compassEnabled: false,
-              mapToolbarEnabled: false,
-              zoomControlsEnabled: false,
-              onCameraMove: (cameraPosition) async {
-                const url = 'http://localhost:8000/pois/get-pois';
-                if (myPois.isNotEmpty) {
-                  setState(() {
-                    myPois.clear();
-                  });
+          GoogleMap(
+            mapType: MapType.normal,
+            onMapCreated: (GoogleMapController controller) async {
+              controller1.complete(controller);
+              controller.setMapStyle(json);
+              getPois(currentPosition.latitude, currentPosition.longitude, 0.5, null, [], myRating);
+            },
+            initialCameraPosition: CameraPosition(target: demosPosition, zoom: 15),
+            markers: myPois.toSet(),
+            myLocationButtonEnabled: false,
+            buildingsEnabled: false,
+            compassEnabled: false,
+            mapToolbarEnabled: false,
+            zoomControlsEnabled: false,
+            onTap: (move) {
+              setState(() {
+                testMarker = Marker(
+                    markerId: MarkerId('test'),
+                    position: LatLng(move.latitude, move.longitude),
+                    onTap: () {
+                      setState(() {
+                        testMarker = Marker(markerId: MarkerId('test'), position: LatLng(0, 0));
+                      });
+                    });
+                myPois.add(testMarker);
+              });
+            },
+            onCameraMove: (cameraPosition) async {
+              const url = 'http://localhost:8000/pois/get-pois';
+              if (myPois.isNotEmpty) {
+                setState(() {
+                  myPois.clear();
+                  myPois.add(testMarker);
+                });
+              }
+
+              dynamic theFinalOpen;
+              if (openOrAll[1] == true) {
+                theFinalOpen = true;
+              } else {
+                theFinalOpen = null;
+              }
+              try {
+                final response = await http.post(Uri.parse(url),
+                    headers: <String, String>{'Content-Type': 'application/json'},
+                    body: jsonEncode({
+                      "latitude": cameraPosition.target.latitude,
+                      "longitude": cameraPosition.target.longitude,
+                      "radius": radius,
+                      "open_now": theFinalOpen,
+                      "categories": (selectedCategory != "") ? [selectedCategory] : [],
+                      "rating": myRating
+                    }));
+
+                final pois2 = jsonDecode(response.body) as List;
+                if (kDebugMode) {
+                  print('\n/n');
+                  print('\n/n');
+                  print('\n/n');
+                  print(pois2);
+                  print(pois2.length);
                 }
 
-                try {
-                  final response = await http.post(Uri.parse(url),
-                      headers: <String, String>{'Content-Type': 'application/json'},
-                      body: jsonEncode({
-                        "latitude": cameraPosition.target.latitude,
-                        "longitude": cameraPosition.target.longitude,
-                        "radius": selected2 ? 0.2 : 0.5,
-                        "open_now": selected1 ? true : null,
-                        "categories": (selectedCategory != "") ? [selectedCategory] : [],
-                        "rating": myRating
-                      }));
+                BitmapDescriptor markerbitmap = await BitmapDescriptor.fromAssetImage(
+                  const ImageConfiguration(),
+                  "assets/map-pin.jpeg",
+                );
 
-                  final pois2 = jsonDecode(response.body) as List;
-                  if (kDebugMode) {
-                    print('\n/n');
-                    print('\n/n');
-                    print('\n/n');
-                    print(pois2);
-                    print(pois2.length);
-                  }
-
-                  BitmapDescriptor markerbitmap = await BitmapDescriptor.fromAssetImage(
-                    const ImageConfiguration(),
-                    "assets/map-pin.jpeg",
-                  );
-
-                  for (int i = 0; i < pois2.length; i++) {
-                    if (pois2[i]['category'].toString() == 'Aeroport') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/airport.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'Agentie de turism' ||
-                        pois2[i]['category'].toString() == 'Agentie imobiliara' ||
-                        pois2[i]['category'].toString() == 'Institutie publica' ||
-                        pois2[i]['category'].toString() == 'Travel agency' ||
-                        pois2[i]['category'].toString() == 'Consultant') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/travel-agency.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'Alternative fuel station' ||
-                        pois2[i]['category'].toString() == 'Benzinarie' ||
-                        pois2[i]['category'].toString() == 'Companie de petrol si gaze naturale' ||
-                        pois2[i]['category'].toString() == 'Electric vehicle charging station') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/gas-station.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'Ambasada' ||
-                        pois2[i]['category'].toString() == 'Business center' ||
-                        pois2[i]['category'].toString() == 'Organizatie') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/local-government.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'Amusement park ride' ||
-                        pois2[i]['category'].toString() == 'Parc' ||
-                        pois2[i]['category'].toString() == 'Playground') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/playground.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'Apartament in regim hotelier' ||
-                        pois2[i]['category'].toString() == 'Hostel' ||
-                        pois2[i]['category'].toString() == 'hotels' ||
-                        pois2[i]['category'].toString() == 'Motel' ||
-                        pois2[i]['category'].toString() == 'Pensiune') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/place.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'ATM' || pois2[i]['category'].toString() == 'Banca') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/bank.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'attractions' ||
-                        pois2[i]['category'].toString() == 'Galerie de arta' ||
-                        pois2[i]['category'].toString() == 'Monument' ||
-                        pois2[i]['category'].toString() == 'museums' ||
-                        pois2[i]['category'].toString() == 'Opera' ||
-                        pois2[i]['category'].toString() == 'Sala de evenimente' ||
-                        pois2[i]['category'].toString() == 'statuie') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/point-of-interest.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'Auto parts store' ||
-                        pois2[i]['category'].toString() == 'Centru comercial' ||
-                        pois2[i]['category'].toString() == 'Clothing store' ||
-                        pois2[i]['category'].toString() == 'Companie de software' ||
-                        pois2[i]['category'].toString() == 'Electrician' ||
-                        pois2[i]['category'].toString() == 'Electronics store' ||
-                        pois2[i]['category'].toString() == 'Energy supplier' ||
-                        pois2[i]['category'].toString() == 'Furniture store' ||
-                        pois2[i]['category'].toString() == 'Parfumerie' ||
-                        pois2[i]['category'].toString() == 'Toy store' ||
-                        pois2[i]['category'].toString() == 'Warehouse' ||
-                        pois2[i]['category'].toString() == 'service auto') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/store.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'Bacanie' ||
-                        pois2[i]['category'].toString() == 'Cofetarie' ||
-                        pois2[i]['category'].toString() == 'coffee shops' ||
-                        pois2[i]['category'].toString() == ' Hypermarket' ||
-                        pois2[i]['category'].toString() == 'Ice cream shop' ||
-                        pois2[i]['category'].toString() == 'restaurants' ||
-                        pois2[i]['category'].toString() == 'Supermarket' ||
-                        pois2[i]['category'].toString() == 'Patiserie' ||
-                        pois2[i]['category'].toString() == 'Piata') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/food.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'bars' ||
-                        pois2[i]['category'].toString() == 'Wine store') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/night-club.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'Barber shop' ||
-                        pois2[i]['category'].toString() == 'Beauty salon' ||
-                        pois2[i]['category'].toString() == 'SPA') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/beauty-salon.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'Biblioteca' ||
-                        pois2[i]['category'].toString() == 'Librarie' ||
-                        pois2[i]['category'].toString() == 'scoala' ||
-                        pois2[i]['category'].toString() == 'Universitate') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/book-store.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'Biserica' ||
-                        pois2[i]['category'].toString() == 'Catedrala') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/church.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'Car dealer' ||
-                        pois2[i]['category'].toString() == 'Car rental' ||
-                        pois2[i]['category'].toString() == 'Car wash' ||
-                        pois2[i]['category'].toString() == 'Vulcanizare') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/car-rental.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'Cazino') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/casino.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'Companie farmaceutica' ||
-                        pois2[i]['category'].toString() == 'Hospital' ||
-                        pois2[i]['category'].toString() == 'Pharmacy') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/doctor.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'Farmacie veterinara' ||
-                        pois2[i]['category'].toString() == 'Medic veterinar' ||
-                        pois2[i]['category'].toString() == 'pet shop') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/pet-store.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'fitness') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/gym.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'Florarie') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/florist.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'Gara' ||
-                        pois2[i]['category'].toString() == 'Statie de autobuz' ||
-                        pois2[i]['category'].toString() == 'Statie de metrou' ||
-                        pois2[i]['category'].toString() == 'Statie de tramvai') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/train-station.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'Jewelry store') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/jewelry-store.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'Parking lot') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/parking.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'Taxi') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/taxi-stand.jpeg",
-                      );
-                      setState(() {});
-                    } else if (pois2[i]['category'].toString() == 'Club sportiv' ||
-                        pois2[i]['category'].toString() == 'Stadion') {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/stadium.jpeg",
-                      );
-                      setState(() {});
-                    } else {
-                      markerbitmap = await BitmapDescriptor.fromAssetImage(
-                        const ImageConfiguration(),
-                        "assets/map-pin.jpeg",
-                      );
-                      setState(() {});
-                    }
-                    setState(() {
-                      myPois.add(Marker(
-                        markerId: MarkerId(pois2[i]['name'].toString()),
-                        position: LatLng(double.parse(pois2[i]['latitude'].toString()),
-                            double.parse(pois2[i]['longitude'].toString())),
-                        infoWindow: InfoWindow(title: pois2[i]['name'].toString()),
-                        icon: markerbitmap,
-                        onTap: () async {
-                          Map<dynamic, dynamic> thePoi = {};
-                          thePoi = await getPoiInfo(double.parse(pois2[i]['latitude'].toString()),
-                              double.parse(pois2[i]['longitude'].toString()));
-                          showModalBottomSheet(
-                            context: context,
-                            builder: (context) => poiInfo(thePoi),
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                          );
-                        },
-                      ));
-                    });
-                  }
-                  if (kDebugMode) {
-                    print('getPois() is called');
+                for (int i = 0; i < pois2.length; i++) {
+                  if (pois2[i]['category'].toString() == 'Aeroport') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/airport.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'Agentie de turism' ||
+                      pois2[i]['category'].toString() == 'Agentie imobiliara' ||
+                      pois2[i]['category'].toString() == 'Institutie publica' ||
+                      pois2[i]['category'].toString() == 'Travel agency' ||
+                      pois2[i]['category'].toString() == 'Consultant') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/travel-agency.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'Alternative fuel station' ||
+                      pois2[i]['category'].toString() == 'Benzinarie' ||
+                      pois2[i]['category'].toString() == 'Companie de petrol si gaze naturale' ||
+                      pois2[i]['category'].toString() == 'Electric vehicle charging station') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/gas-station.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'Ambasada' ||
+                      pois2[i]['category'].toString() == 'Business center' ||
+                      pois2[i]['category'].toString() == 'Organizatie') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/local-government.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'Amusement park ride' ||
+                      pois2[i]['category'].toString() == 'Parc' ||
+                      pois2[i]['category'].toString() == 'Playground') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/playground.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'Apartament in regim hotelier' ||
+                      pois2[i]['category'].toString() == 'Hostel' ||
+                      pois2[i]['category'].toString() == 'hotels' ||
+                      pois2[i]['category'].toString() == 'Motel' ||
+                      pois2[i]['category'].toString() == 'Pensiune') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/place.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'ATM' || pois2[i]['category'].toString() == 'Banca') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/bank.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'attractions' ||
+                      pois2[i]['category'].toString() == 'Galerie de arta' ||
+                      pois2[i]['category'].toString() == 'Monument' ||
+                      pois2[i]['category'].toString() == 'museums' ||
+                      pois2[i]['category'].toString() == 'Opera' ||
+                      pois2[i]['category'].toString() == 'Sala de evenimente' ||
+                      pois2[i]['category'].toString() == 'statuie') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/point-of-interest.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'Auto parts store' ||
+                      pois2[i]['category'].toString() == 'Centru comercial' ||
+                      pois2[i]['category'].toString() == 'Clothing store' ||
+                      pois2[i]['category'].toString() == 'Companie de software' ||
+                      pois2[i]['category'].toString() == 'Electrician' ||
+                      pois2[i]['category'].toString() == 'Electronics store' ||
+                      pois2[i]['category'].toString() == 'Energy supplier' ||
+                      pois2[i]['category'].toString() == 'Furniture store' ||
+                      pois2[i]['category'].toString() == 'Parfumerie' ||
+                      pois2[i]['category'].toString() == 'Toy store' ||
+                      pois2[i]['category'].toString() == 'Warehouse' ||
+                      pois2[i]['category'].toString() == 'service auto') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/store.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'Bacanie' ||
+                      pois2[i]['category'].toString() == 'Cofetarie' ||
+                      pois2[i]['category'].toString() == 'coffee shops' ||
+                      pois2[i]['category'].toString() == ' Hypermarket' ||
+                      pois2[i]['category'].toString() == 'Ice cream shop' ||
+                      pois2[i]['category'].toString() == 'restaurants' ||
+                      pois2[i]['category'].toString() == 'Supermarket' ||
+                      pois2[i]['category'].toString() == 'Patiserie' ||
+                      pois2[i]['category'].toString() == 'Piata') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/food.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'bars' ||
+                      pois2[i]['category'].toString() == 'Wine store') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/night-club.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'Barber shop' ||
+                      pois2[i]['category'].toString() == 'Beauty salon' ||
+                      pois2[i]['category'].toString() == 'SPA') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/beauty-salon.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'Biblioteca' ||
+                      pois2[i]['category'].toString() == 'Librarie' ||
+                      pois2[i]['category'].toString() == 'scoala' ||
+                      pois2[i]['category'].toString() == 'Universitate') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/book-store.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'Biserica' ||
+                      pois2[i]['category'].toString() == 'Catedrala') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/church.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'Car dealer' ||
+                      pois2[i]['category'].toString() == 'Car rental' ||
+                      pois2[i]['category'].toString() == 'Car wash' ||
+                      pois2[i]['category'].toString() == 'Vulcanizare') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/car-rental.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'Cazino') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/casino.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'Companie farmaceutica' ||
+                      pois2[i]['category'].toString() == 'Hospital' ||
+                      pois2[i]['category'].toString() == 'Pharmacy') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/doctor.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'Farmacie veterinara' ||
+                      pois2[i]['category'].toString() == 'Medic veterinar' ||
+                      pois2[i]['category'].toString() == 'pet shop') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/pet-store.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'fitness') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/gym.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'Florarie') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/florist.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'Gara' ||
+                      pois2[i]['category'].toString() == 'Statie de autobuz' ||
+                      pois2[i]['category'].toString() == 'Statie de metrou' ||
+                      pois2[i]['category'].toString() == 'Statie de tramvai') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/train-station.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'Jewelry store') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/jewelry-store.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'Parking lot') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/parking.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'Taxi') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/taxi-stand.jpeg",
+                    );
+                    setState(() {});
+                  } else if (pois2[i]['category'].toString() == 'Club sportiv' ||
+                      pois2[i]['category'].toString() == 'Stadion') {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/stadium.jpeg",
+                    );
+                    setState(() {});
+                  } else {
+                    markerbitmap = await BitmapDescriptor.fromAssetImage(
+                      const ImageConfiguration(),
+                      "assets/map-pin.jpeg",
+                    );
+                    setState(() {});
                   }
                   setState(() {
-                    myPois.add(
-                      Marker(
-                        markerId: const MarkerId('demo'),
-                        position: LatLng(currentPosition.latitude, currentPosition.longitude),
-                        draggable: false,
-                      ),
-                    );
+                    myPois.add(Marker(
+                      markerId: MarkerId(pois2[i]['name'].toString()),
+                      position: LatLng(double.parse(pois2[i]['latitude'].toString()),
+                          double.parse(pois2[i]['longitude'].toString())),
+                      infoWindow: InfoWindow(title: pois2[i]['name'].toString()),
+                      icon: markerbitmap,
+                      onTap: () async {
+                        Map<dynamic, dynamic> thePoi = {};
+                        thePoi = await getPoiInfo(double.parse(pois2[i]['latitude'].toString()),
+                            double.parse(pois2[i]['longitude'].toString()));
+                        showModalBottomSheet(
+                          context: context,
+                          builder: (context) => poiInfo(thePoi),
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                        );
+                      },
+                    ));
                   });
-                } catch (err) {
-                  if (kDebugMode) {
-                    print(err);
-                  }
                 }
                 if (kDebugMode) {
-                  print("\n\n\n");
+                  print('getPois() is called');
                 }
-              },
-            ),
-          )
+                setState(() {
+                  myPois.add(
+                    Marker(
+                      markerId: const MarkerId('demo'),
+                      position: LatLng(currentPosition.latitude, currentPosition.longitude),
+                      draggable: false,
+                    ),
+                  );
+                });
+              } catch (err) {
+                if (kDebugMode) {
+                  print(err);
+                }
+              }
+              if (kDebugMode) {
+                print("\n\n\n");
+              }
+            },
+          ),
+          // Positioned(
+          //   top: 10.0,
+          //   child: SizedBox(
+          //     height: 60,
+          //     width: 300,
+          //     child: Container(
+          //       color: Colors.white24,
+          //       child: TextFormField(
+          //         controller: text,
+          //         decoration: InputDecoration(
+          //           hintText: 'Search for a POI',
+          //           contentPadding: const EdgeInsets.all(15),
+          //           border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
+          //           suffixIcon: IconButton(
+          //               onPressed: () {
+          //                 text.clear();
+          //               },
+          //               icon: const Icon(Icons.clear)),
+          //         ),
+          //         onChanged: (value) {
+          //           getSuggestion(value);
+          //           if (kDebugMode) {
+          //             print(suggestions);
+          //           }
+          //         },
+          //       ),
+          //     ),
+          //   ),
+          // ),
+
+          //TODO smart search of pois using post request while typing
+          //TODO smart redirect on poi onPressed method of poi text
         ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           GoogleMapController controller = await controller1.future;
           controller.animateCamera(CameraUpdate.newCameraPosition(
-              CameraPosition(target: LatLng(myPosition.latitude, myPosition.longitude), zoom: 16)));
+              CameraPosition(target: LatLng(myPosition.latitude, myPosition.longitude), zoom: 15)));
           if (kDebugMode) {
             print('moved');
           }
@@ -1433,7 +1478,125 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget poiInfo(Map<dynamic, dynamic> poi) {
     // Map<dynamic, dynamic> thePoi = {};
     // thePoi = await getPoiInfo(lat, long);
-    //Todo: to do controller DraggableScrollableSheet
+    //Todo: to do controller DraggableScrollableSheet-done?
+    //Todo: in functie de categorie, pun imaginea care corespunde Poi-ului(copiez liniile alea lungi de cod)
+    String image = '';
+
+    if (poi['category'].toString() == 'Aeroport') {
+      image = "assets/airport.jpeg";
+    } else if (poi['category'].toString() == 'Agentie de turism' ||
+        poi['category'].toString() == 'Agentie imobiliara' ||
+        poi['category'].toString() == 'Institutie publica' ||
+        poi['category'].toString() == 'Travel agency' ||
+        poi['category'].toString() == 'Consultant') {
+      image = "assets/travel-agency.jpeg";
+    } else if (poi['category'].toString() == 'Alternative fuel station' ||
+        poi['category'].toString() == 'Benzinarie' ||
+        poi['category'].toString() == 'Companie de petrol si gaze naturale' ||
+        poi['category'].toString() == 'Electric vehicle charging station') {
+      image = "assets/gas-station.jpeg";
+    } else if (poi['category'].toString() == 'Ambasada' ||
+        poi['category'].toString() == 'Business center' ||
+        poi['category'].toString() == 'Organizatie') {
+      image = "assets/local-government.jpeg";
+    } else if (poi['category'].toString() == 'Amusement park ride' ||
+        poi['category'].toString() == 'Parc' ||
+        poi['category'].toString() == 'Playground') {
+      image = "assets/playground.jpeg";
+    } else if (poi['category'].toString() == 'Apartament in regim hotelier' ||
+        poi['category'].toString() == 'Hostel' ||
+        poi['category'].toString() == 'hotels' ||
+        poi['category'].toString() == 'Motel' ||
+        poi['category'].toString() == 'Pensiune') {
+      image = "assets/place.jpeg";
+    } else if (poi['category'].toString() == 'ATM' || poi['category'].toString() == 'Banca') {
+      image = "assets/bank.jpeg";
+
+      setState(() {});
+    } else if (poi['category'].toString() == 'attractions' ||
+        poi['category'].toString() == 'Galerie de arta' ||
+        poi['category'].toString() == 'Monument' ||
+        poi['category'].toString() == 'museums' ||
+        poi['category'].toString() == 'Opera' ||
+        poi['category'].toString() == 'Sala de evenimente' ||
+        poi['category'].toString() == 'statuie') {
+      image = "assets/point-of-interest.jpeg";
+    } else if (poi['category'].toString() == 'Auto parts store' ||
+        poi['category'].toString() == 'Centru comercial' ||
+        poi['category'].toString() == 'Clothing store' ||
+        poi['category'].toString() == 'Companie de software' ||
+        poi['category'].toString() == 'Electrician' ||
+        poi['category'].toString() == 'Electronics store' ||
+        poi['category'].toString() == 'Energy supplier' ||
+        poi['category'].toString() == 'Furniture store' ||
+        poi['category'].toString() == 'Parfumerie' ||
+        poi['category'].toString() == 'Toy store' ||
+        poi['category'].toString() == 'Warehouse' ||
+        poi['category'].toString() == 'service auto') {
+      image = "assets/store.jpeg";
+    } else if (poi['category'].toString() == 'Bacanie' ||
+        poi['category'].toString() == 'Cofetarie' ||
+        poi['category'].toString() == 'coffee shops' ||
+        poi['category'].toString() == ' Hypermarket' ||
+        poi['category'].toString() == 'Ice cream shop' ||
+        poi['category'].toString() == 'restaurants' ||
+        poi['category'].toString() == 'Supermarket' ||
+        poi['category'].toString() == 'Patiserie' ||
+        poi['category'].toString() == 'Piata') {
+      image = "assets/food.jpeg";
+    } else if (poi['category'].toString() == 'bars' || poi['category'].toString() == 'Wine store') {
+      image = "assets/night-club.jpeg";
+    } else if (poi['category'].toString() == 'Barber shop' ||
+        poi['category'].toString() == 'Beauty salon' ||
+        poi['category'].toString() == 'SPA') {
+      image = "assets/beauty-salon.jpeg";
+    } else if (poi['category'].toString() == 'Biblioteca' ||
+        poi['category'].toString() == 'Librarie' ||
+        poi['category'].toString() == 'scoala' ||
+        poi['category'].toString() == 'Universitate') {
+      image = "assets/book-store.jpeg";
+    } else if (poi['category'].toString() == 'Biserica' || poi['category'].toString() == 'Catedrala') {
+      image = "assets/church.jpeg";
+    } else if (poi['category'].toString() == 'Car dealer' ||
+        poi['category'].toString() == 'Car rental' ||
+        poi['category'].toString() == 'Car wash' ||
+        poi['category'].toString() == 'Vulcanizare') {
+      image = "assets/car-rental.jpeg";
+    } else if (poi['category'].toString() == 'Cazino') {
+      image = "assets/casino.jpeg";
+    } else if (poi['category'].toString() == 'Companie farmaceutica' ||
+        poi['category'].toString() == 'Hospital' ||
+        poi['category'].toString() == 'Pharmacy') {
+      image = "assets/doctor.jpeg";
+    } else if (poi['category'].toString() == 'Farmacie veterinara' ||
+        poi['category'].toString() == 'Medic veterinar' ||
+        poi['category'].toString() == 'pet shop') {
+      image = "assets/pet-store.jpeg";
+    } else if (poi['category'].toString() == 'fitness') {
+      image = "assets/gym.jpeg";
+    } else if (poi['category'].toString() == 'Florarie') {
+      image = "assets/florist.jpeg";
+    } else if (poi['category'].toString() == 'Gara' ||
+        poi['category'].toString() == 'Statie de autobuz' ||
+        poi['category'].toString() == 'Statie de metrou' ||
+        poi['category'].toString() == 'Statie de tramvai') {
+      image = "assets/train-station.jpeg";
+    } else if (poi['category'].toString() == 'Jewelry store') {
+      image = "assets/jewelry-store.jpeg";
+    } else if (poi['category'].toString() == 'Parking lot') {
+      image = "assets/parking.jpeg";
+    } else if (poi['category'].toString() == 'Taxi') {
+      image = "assets/taxi-stand.jpeg";
+    } else if (poi['category'].toString() == 'Club sportiv' || poi['category'].toString() == 'Stadion') {
+      image = "assets/stadium.jpeg";
+    } else {
+      image = "assets/map-pin.jpeg";
+    }
+
+    dynamic schedule = jsonDecode(poi['working_hours'].toString());
+    if (kDebugMode) {
+      print(schedule);
+    }
     return makeDismissible(
         child: DraggableScrollableSheet(
             initialChildSize: 0.5,
@@ -1472,6 +1635,16 @@ class _MyHomePageState extends State<MyHomePage> {
                             fontWeight: FontWeight.bold,
                           ),
                         )),
+                        const SizedBox(
+                          height: 10,
+                        ),
+                        Center(
+                          child: SizedBox(
+                            width: 30,
+                            height: 30,
+                            child: Image.asset(image),
+                          ),
+                        ),
                         const SizedBox(
                           height: 10,
                         ),
@@ -1519,7 +1692,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
                         Center(
                             child: Text(
-                          "Rating: ${double.parse(poi['average_rating']).toStringAsFixed(2)}",
+                          "Rating: ${double.parse(poi['average_rating'].toString()).toStringAsFixed(2)}",
                           style: const TextStyle(
                             color: Colors.black,
                             fontSize: 17,
@@ -1535,15 +1708,57 @@ class _MyHomePageState extends State<MyHomePage> {
                           height: 10,
                         ),
                         Center(
-                            child: Text(
-                          "Schedule: ${poi['working_hours']}",
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 15,
-                          ),
+                            child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                const SizedBox(
+                                  width: 40,
+                                ),
+                                const Icon(
+                                  Icons.access_alarm,
+                                  color: Colors.indigoAccent,
+                                ),
+                                const SizedBox(
+                                  width: 20,
+                                ),
+                                Center(
+                                  child: Column(
+                                    children: [
+                                      Text('Monday     ${schedule['Monday']}'),
+                                      const SizedBox(
+                                        height: 4,
+                                      ),
+                                      Text('Tuesday     ${schedule['Tuesday']}'),
+                                      const SizedBox(
+                                        height: 4,
+                                      ),
+                                      Text('Wednesday     ${schedule['Wednesday']}'),
+                                      const SizedBox(
+                                        height: 4,
+                                      ),
+                                      Text('Thursday     ${schedule['Thursday']}'),
+                                      const SizedBox(
+                                        height: 4,
+                                      ),
+                                      Text('Friday     ${schedule['Friday']}'),
+                                      const SizedBox(
+                                        height: 4,
+                                      ),
+                                      Text('Saturday     ${schedule['Saturday']}'),
+                                      const SizedBox(
+                                        height: 4,
+                                      ),
+                                      Text('Sunday     ${schedule['Sunday']}'),
+                                    ],
+                                  ),
+                                )
+                              ],
+                            ),
+                          ],
                         )),
                         const SizedBox(
-                          height: 30,
+                          height: 40,
                         ),
                         ConstrainedBox(
                             constraints: const BoxConstraints(
@@ -1565,5 +1780,151 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                 )));
+  }
+
+  Future openDialog(Function newSetState) async {
+    List<Map<dynamic, dynamic>> suggestions = []; //String
+    final TextEditingController text = TextEditingController();
+    String searchValue = "";
+    GoogleMapController controller = await controller1.future;
+    bool tapped = false;
+    List<Map<dynamic, dynamic>> mapa = [];
+    Map<dynamic, dynamic> thePoi = {};
+    dynamic theFinalOpen;
+    if (openOrAll[1] == true) {
+      theFinalOpen = true;
+    } else {
+      theFinalOpen = null;
+    }
+
+    return showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (BuildContext context, Function newSetState) => AlertDialog(
+          title: const Text('Search for a POI'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: 60,
+                  width: 300,
+                  child: Container(
+                    color: Colors.white24,
+                    child: TextFormField(
+                      controller: text,
+                      decoration: InputDecoration(
+                        hintText: 'Search for a POI',
+                        contentPadding: const EdgeInsets.all(15),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
+                        suffixIcon: IconButton(
+                            onPressed: () {
+                              text.clear();
+                              newSetState(() {
+                                suggestions.clear();
+                              });
+                            },
+                            icon: const Icon(Icons.clear)),
+                      ),
+                      onChanged: (value) async {
+                        const url = 'http://localhost:8000/pois/get-pois-by-name';
+                        newSetState(() {
+                          searchValue = value;
+                        });
+                        if (suggestions.isNotEmpty) {
+                          newSetState(() {
+                            suggestions.clear();
+                          });
+                        }
+
+                        try {
+                          final response = await http.post(Uri.parse(url),
+                              headers: <String, String>{'Content-Type': 'application/json'},
+                              body: jsonEncode({"poi_name": value}));
+                          final json = jsonDecode(response.body) as List<dynamic>;
+                          if (kDebugMode) {
+                            print('getSuggestions() is called');
+                            print(json);
+                            print("\n\n\n");
+                          }
+                          for (int i = 0; i <= 3; i++) {
+                            newSetState(() {
+                              suggestions.add({
+                                "name": json[i]['name'].toString(),
+                                "latitude": json[i]['latitude'],
+                                "longitude": json[i]['longitude']
+                              });
+                            });
+                          }
+                          if (kDebugMode) {
+                            print(suggestions);
+                          }
+                        } catch (err) {
+                          if (kDebugMode) {
+                            print(err);
+                          }
+                        }
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(
+                  height: 15,
+                ),
+                suggestions.isEmpty
+                    ? const Center(
+                        child: Text('enterPoi'),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: suggestions.length,
+                        itemBuilder: (context, index) {
+                          dynamic result = suggestions[index];
+                          return Column(
+                            children: [
+                              ListTile(
+                                title: Text(result["name"].toString()),
+                                contentPadding: const EdgeInsets.only(bottom: 7, right: 7, left: 7),
+                                onTap: () {
+                                  if (kDebugMode) {
+                                    print(result);
+                                  }
+                                  newSetState(() {
+                                    testMarker = Marker(
+                                      markerId: MarkerId('test'),
+                                      position: LatLng(double.parse(result['latitude']!.toString()),
+                                          double.parse(result['longitude']!.toString())),
+                                    );
+                                  });
+                                  controller.animateCamera(CameraUpdate.newCameraPosition(CameraPosition(
+                                      target: LatLng(double.parse(result['latitude']!.toString()),
+                                          double.parse(result['longitude']!.toString())),
+                                      zoom: 15)));
+
+                                  myPois.add(testMarker);
+                                  Navigator.pop(context);
+                                  newSetState(() {});
+                                  if (kDebugMode) {
+                                    print('moved');
+                                  }
+                                },
+                              ),
+                              index != suggestions.length - 1
+                                  ? const Divider(
+                                      height: 2,
+                                      thickness: 2,
+                                    )
+                                  : Container(),
+                            ],
+                          );
+                        }),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: true,
+    );
   }
 }
